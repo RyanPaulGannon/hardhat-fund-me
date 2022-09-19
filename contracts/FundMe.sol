@@ -27,10 +27,10 @@ contract FundMe {
   using PriceConverter for uint256;
 
   // State Variables
-  mapping(address => uint256) private s_addressToAmountFunded; // Storage variables syntax usually "s_var"
-  address[] private s_funders;
+  uint256 public constant MINIMUM_USD = 5 * 10**18; // Constant value syntax usually "CAPS_CAPS"
   address private immutable i_owner; // Immutable value syntax usually "i_..."
-  uint256 public constant MINIMUM_USD = 50 * 10**18; // Constant value syntax usually "CAPS_CAPS"
+  address[] private s_funders;
+  mapping(address => uint256) private s_addressToAmountFunded; // Storage variables syntax usually "s_var"
   AggregatorV3Interface private s_priceFeed;
 
   // Modifiers
@@ -43,9 +43,9 @@ contract FundMe {
   }
 
   // Functions
-  constructor(address priceFeedAddress) {
+  constructor(address priceFeed) {
     i_owner = msg.sender;
-    s_priceFeed = AggregatorV3Interface(priceFeedAddress);
+    s_priceFeed = AggregatorV3Interface(priceFeed);
   }
 
   receive() external payable {
@@ -98,10 +98,8 @@ contract FundMe {
 
     // Call (one of the first lower level commands, can be used to call almost any function without
     // needing abi. Looks similar to send.
-    (bool callSuccess, ) = payable(msg.sender).call{
-      value: address(this).balance
-    }("");
-    require(callSuccess, "Call Failed");
+    (bool success, ) = i_owner.call{value: address(this).balance}("");
+    require(success);
   }
 
   function cheaperWithdraw() public onlyOwner {
@@ -115,23 +113,27 @@ contract FundMe {
     require(Success);
   }
 
-  function getOwner() public view returns (address) {
-    return i_owner;
-  }
+  function getAddressToAmountFunded(address fundingAddress)
+        public
+        view
+        returns (uint256)
+    {
+        return s_addressToAmountFunded[fundingAddress];
+    }
 
-  function getFunders(uint256 index) public view returns (address) {
-    return s_funders[index];
-  }
+    function getVersion() public view returns (uint256) {
+        return s_priceFeed.version();
+    }
 
-  function getAddressToAmountFunded(address funder)
-    public
-    view
-    returns (uint256)
-  {
-    return s_addressToAmountFunded[funder];
-  }
+    function getFunder(uint256 index) public view returns (address) {
+        return s_funders[index];
+    }
 
-  function getPriceFeed() public view returns (AggregatorV3Interface) {
-    return s_priceFeed;
-  }
+    function getOwner() public view returns (address) {
+        return i_owner;
+    }
+
+    function getPriceFeed() public view returns (AggregatorV3Interface) {
+        return s_priceFeed;
+    }
 }
